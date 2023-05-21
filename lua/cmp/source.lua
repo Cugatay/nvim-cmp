@@ -59,7 +59,8 @@ source.reset = function(self)
   self.request_offset = -1
   self.completion_context = nil
   self.status = source.SourceStatus.WAITING
-  self.complete_dedup(function() end)
+  self.complete_dedup(function()
+  end)
 end
 
 ---Return source config
@@ -113,7 +114,17 @@ source.get_entries = function(self, ctx)
   local entries = {}
   local max_item_count = self:get_source_config().max_item_count or 200
   local matching_config = self:get_matching_config()
+  local start = vim.loop.hrtime()
   for _, e in ipairs(target_entries) do
+    if vim.loop.hrtime() - start >= 10000000 then
+      async.yield_schedule()
+      start = vim.loop.hrtime()
+    end
+
+    if ctx.cancelled then
+      break
+    end
+
     local o = e:get_offset()
     if not inputs[o] then
       inputs[o] = string.sub(ctx.cursor_before_line, o)
@@ -137,7 +148,7 @@ source.get_entries = function(self, ctx)
 
   -- only save to cache, when there are no additional entries that could match the filter
   -- This also prevents too much memory usage
-  if #entries < max_item_count then
+  if #entries < max_item_count and not ctx.cancelled then
     self.cache:set({ 'get_entries', tostring(self.revision), ctx.cursor_before_line }, entries)
   end
 
@@ -174,7 +185,8 @@ source.get_default_replace_range = function(self)
   end
 
   return self.cache:ensure({ 'get_default_replace_range', tostring(self.revision) }, function()
-    local _, e = pattern.offset('^' .. '\\%(' .. self:get_keyword_pattern() .. '\\)', string.sub(self.context.cursor_line, self.offset))
+    local _, e = pattern.offset('^' .. '\\%(' .. self:get_keyword_pattern() .. '\\)',
+      string.sub(self.context.cursor_line, self.offset))
     return {
       start = {
         line = self.context.cursor.row - 1,
@@ -345,8 +357,6 @@ source.complete = function(self, ctx, callback)
 
       if #(response.items or response) > 0 then
         debug.log(self:get_debug_name(), 'retrieve', #(response.items or response))
-        local old_offset = self.offset
-        local old_entries = self.entries
 
         self.status = source.SourceStatus.COMPLETED
         self.entries = {}
@@ -358,11 +368,6 @@ source.complete = function(self, ctx, callback)
           end
         end
         self.revision = self.revision + 1
-        if #self:get_entries(ctx) == 0 then
-          self.offset = old_offset
-          self.entries = old_entries
-          self.revision = self.revision + 1
-        end
       else
         -- The completion will be invoked when pressing <CR> if the trigger characters contain the <Space>.
         -- If the server returns an empty response in such a case, should invoke the keyword completion on the next keypress.

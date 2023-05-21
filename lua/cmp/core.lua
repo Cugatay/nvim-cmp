@@ -56,6 +56,7 @@ end
 ---@param option? cmp.ContextOption
 ---@return cmp.Context
 core.get_context = function(self, option)
+  self.context:cancel()
   local prev = self.context:clone()
   prev.prev_context = nil
   prev.cache = nil
@@ -125,7 +126,7 @@ core.on_keymap = function(self, keys, fallback)
     }, function()
       local ctx = self:get_context()
       local word = e:get_word()
-      if string.sub(ctx.cursor_before_line, -#word, ctx.cursor.col - 1) == word and is_printable then
+      if string.sub(ctx.cursor_before_line, - #word, ctx.cursor.col - 1) == word and is_printable then
         fallback()
       else
         self:reset()
@@ -296,7 +297,7 @@ core.complete = function(self, ctx)
 end
 
 ---Update completion menu
-core.filter = async.throttle(function(self)
+core.filter = async.throttle(async.wrap(function(self)
   self.filter.timeout = config.get().performance.throttle
 
   -- Check invalid condition.
@@ -327,16 +328,16 @@ core.filter = async.throttle(function(self)
 
   -- Check onetime config.
   if #self:get_sources(function(s)
-    if s.status == source.SourceStatus.FETCHING then
-      return true
-    elseif #s:get_entries(ctx) > 0 then
-      return true
-    end
-    return false
-  end) == 0 then
+        if s.status == source.SourceStatus.FETCHING then
+          return true
+          -- elseif #s:get_entries(ctx) > 0 then
+          --   return true
+        end
+        return false
+      end) == 0 then
     config.set_onetime({})
   end
-end, config.get().performance.throttle)
+end), config.get().performance.throttle)
 
 ---Confirm completion.
 ---@param e cmp.Entry
@@ -380,9 +381,10 @@ core.confirm = function(self, e, option, callback)
       vim.cmd([[silent! undojoin]])
       -- This logic must be used nvim_buf_set_text.
       -- If not used, the snippet engine's placeholder wil be broken.
-      vim.api.nvim_buf_set_text(0, e.context.cursor.row - 1, e:get_offset() - 1, ctx.cursor.row - 1, ctx.cursor.col - 1, {
-        e.context.cursor_before_line:sub(e:get_offset()),
-      })
+      vim.api.nvim_buf_set_text(0, e.context.cursor.row - 1, e:get_offset() - 1, ctx.cursor.row - 1, ctx.cursor.col - 1,
+        {
+          e.context.cursor_before_line:sub(e:get_offset()),
+        })
       vim.api.nvim_win_set_cursor(0, { e.context.cursor.row, e.context.cursor.col - 1 })
     end
   end)
@@ -417,7 +419,8 @@ core.confirm = function(self, e, option, callback)
       end)
     else
       vim.cmd([[silent! undojoin]])
-      vim.lsp.util.apply_text_edits(e:get_completion_item().additionalTextEdits, ctx.bufnr, e.source:get_position_encoding_kind())
+      vim.lsp.util.apply_text_edits(e:get_completion_item().additionalTextEdits, ctx.bufnr,
+        e.source:get_position_encoding_kind())
     end
   end)
   feedkeys.call('', 'n', function()
@@ -444,7 +447,8 @@ core.confirm = function(self, e, option, callback)
     if api.is_insert_mode() then
       if false then
         --To use complex expansion debug.
-        vim.print({ -- luacheck: ignore
+        vim.print({
+          -- luacheck: ignore
           item = e:get_completion_item(),
           diff_before = diff_before,
           diff_after = diff_after,
@@ -477,8 +481,10 @@ core.confirm = function(self, e, option, callback)
       end
     else
       local keys = {}
-      table.insert(keys, keymap.backspace(ctx.cursor_line:sub(completion_item.textEdit.range.start.character + 1, ctx.cursor.col - 1)))
-      table.insert(keys, keymap.delete(ctx.cursor_line:sub(ctx.cursor.col, completion_item.textEdit.range['end'].character)))
+      table.insert(keys,
+        keymap.backspace(ctx.cursor_line:sub(completion_item.textEdit.range.start.character + 1, ctx.cursor.col - 1)))
+      table.insert(keys,
+        keymap.delete(ctx.cursor_line:sub(ctx.cursor.col, completion_item.textEdit.range['end'].character)))
       table.insert(keys, new_text)
       feedkeys.call(table.concat(keys, ''), 'in')
     end
