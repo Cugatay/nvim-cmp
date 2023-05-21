@@ -1,29 +1,27 @@
 # nvim-cmp
 
+NOTE: This is the original `hrsh7th/nvim-cmp` with changes made by `yioneko/nvim-cmp`, I forked hrsh7th and added the changes from yioneko, because yioneko's fork was too behind from the original hrsh7th. Please don't forget to give them credits because I'm able to use nvim-cmp thanks to yioneko's brilliant changes, and of course I am able to use vim because of the original creator of this repo, hrsh7th
+
 A completion engine plugin for neovim written in Lua.
 Completion sources are installed from external repositories and "sourced".
 
 <video src="https://user-images.githubusercontent.com/629908/139000570-3ac39587-a88b-43c6-b35e-207489719359.mp4" width="100%"></video>
 
-Readme!
-====================
+# Readme!
 
 1. There is a GitHub issue that documents [breaking changes](https://github.com/hrsh7th/nvim-cmp/issues/231) for nvim-cmp. Subscribe to the issue to be notified of upcoming breaking changes.
 2. This is my hobby project. You can support me via GitHub sponsors.
 3. Bug reports are welcome, but don't expect a fix unless you provide minimal configuration and steps to reproduce your issue.
 4. The `cmp.mapping.preset.*` is pre-defined configuration that aims to mimic neovim's native like behavior. It can be changed without announcement. Please manage key-mapping by yourself.
 
-Concept
-====================
+# Concept
 
 - Full support for LSP completion related capabilities
 - Powerful customizability via Lua functions
 - Smart handling of key mappings
 - No flicker
 
-
-Setup
-====================
+# Setup
 
 ### Recommended Configuration
 
@@ -128,11 +126,9 @@ lua <<EOF
 EOF
 ```
 
-
 ### Where can I find more completion sources?
 
 Have a look at the [Wiki](https://github.com/hrsh7th/nvim-cmp/wiki/List-of-sources) and the `nvim-cmp` [GitHub topic](https://github.com/topics/nvim-cmp).
-
 
 ### Where can I find advanced configuration examples?
 
